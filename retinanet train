@@ -1,0 +1,41 @@
+retinanet-train --image-max-side 700 --image-min-side 700 --epochs 20 --weighted-average --steps 1000 csv pigeon.csv classes --val-annotations test-0.85.csv 
+
+
+retinanet-train --weights --image-max-side 700 --image-min-side 700 --epochs 20 --weighted-average --steps 1000 csv pigeon.csv classes --val-annotations test-0.85.csv 
+
+
+retinanet-train --weights resnet50_coco_best_v2.1.0.h5 --batch-size 4 --epochs 20 --weighted-average --steps 2000 csv pigeon.csv classes --val-annotations test-0.85.csv 
+
+
+retinanet-train --weights resnet50_coco_best_v2.1.0.h5 --image-max-side 700 --image-min-side 700 --batch-size 1 --epochs 10 --weighted-average --steps 1000 --config retina-5r-3s.ini csv pigeon.csv classes --val-annotations test-0.85.csv 
+
+retinanet-train --weights resnet50_coco_best_v2.1.0.h5 --batch-size 2 --epochs 10 --weighted-average --steps 500 --config retina-5r-3s.ini csv pigeon.csv classes --val-annotations test-0.85.csv 
+
+
+
+python3 optimize_anchors.py '/home/minibear/Desktop/pre-data/pigeon.csv' --no-resize --ratios=5
+
+python3 optimize_anchors.py '/home/minibear/Desktop/pre-data/pigeon.csv' --no-resize --ratios=5 --image-max-side 700 --image-min-side 700
+
+################## TRAIN AFTER MIDWAY
+retinanet-train --weights resnet50_coco_best_v2.1.0.h5 --image-max-side 700 --image-min-side 700 --batch-size 1 --epochs 6 --weighted-average --steps 2400 --config retinanet-3.ini csv train_neg_0.85-1885-471-2356.csv classes --val-annotations test-0.85.csv 
+
+################## compute val loss
+retinanet-train --weights resnet50_coco_best_v2.1.0.h5 --image-max-side 700 --image-min-side 700 --batch-size 1 --epochs 6 --weighted-average --compute-val-loss --steps 2400 --config retinanet-3.ini csv train_neg_0.85-1885-471-2356.csv classes --val-annotations test_0.85-333.csv
+
+###### FULL ******** don't forget change train and test file
+retinanet-train --weights resnet50_coco_best_v2.1.0.h5 --image-max-side 700 --image-min-side 700 --batch-size 1 --epochs 10 --weighted-average --compute-val-loss --steps 4000 --config retinanet-3.ini csv train_neg_0.85-1885-332-2217.csv classes --val-annotations test_0.85-333.csv 
+
+ ############### backbone resnet50 #############
+retinanet-train --backbone resnet50 --weights resnet50_coco_best_v2.1.0.h5 --image-max-side 700 --image-min-side 700 --batch-size 1 --epochs 10 --weighted-average --compute-val-loss --steps 4000 --config retinanet-3.ini csv train_neg_0.85-1885-332-2217.csv classes --val-annotations test_0.85-333.csv 
+
+Total params: 36,382,957
+Trainable params: 36,276,717
+Non-trainable params: 106,240
+
+###########################################################
+
+
+
+
+
