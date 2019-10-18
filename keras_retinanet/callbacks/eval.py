@@ -60,7 +60,7 @@ class Evaluate(keras.callbacks.Callback):
         logs = logs or {}
 
         # run evaluation
-        average_precisions = evaluate(
+        average_precisions, recall, precison = evaluate(
             self.generator,
             self.model,
             iou_threshold=self.iou_threshold,
@@ -68,7 +68,8 @@ class Evaluate(keras.callbacks.Callback):
             max_detections=self.max_detections,
             save_path=self.save_path
         )
-
+        self.recall = recall
+        self.precision = precision
         # compute per class average precision
         total_instances = []
         precisions = []
@@ -96,3 +97,5 @@ class Evaluate(keras.callbacks.Callback):
 
         if self.verbose == 1:
             print('mAP: {:.4f}'.format(self.mean_ap))
+            print('recall: {:.4f}'.format(self.recall))
+            print('precision: {:.4f}'.format(self.precision))

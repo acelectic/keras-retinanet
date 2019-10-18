@@ -176,7 +176,9 @@ def create_callbacks(model, training_model, prediction_model, validation_generat
         checkpoint = keras.callbacks.ModelCheckpoint(
             os.path.join(
                 args.snapshot_path,
-                '{backbone}_{dataset_type}_{{epoch:02d}}.h5'.format(backbone=args.backbone, dataset_type=args.dataset_type)
+                '{backbone}_{{epoch:02d}}_loss-{{loss:.4f}}_val-loss-{{val_loss:.4f}}_mAP-{{mAP:.4f}}.h5'.format(
+                    backbone=args.backbone)
+                # '{backbone}_{dataset_type}_{{epoch:02d}}_{{mAP:02d}}.h5'.format(backbone=args.backbone, dataset_type=args.dataset_type)
             ),
             verbose=1,
             # save_best_only=True,
