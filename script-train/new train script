@@ -3,6 +3,12 @@
 #	default anchor
 retinanet-train --backbone resnet50 --weights resnet50_coco_best_v2.1.0.h5 --image-max-side 700 --image-min-side 700 --batch-size 1 --epochs 10 --weighted-average --compute-val-loss --steps 4000  csv train_neg_0.85-1885-332-2217.csv classes --val-annotations test_0.85-333.csv 
 
+Total params: 36,382,957
+Trainable params: 36,276,717
+Non-trainable params: 106,240
+
+
+
 #	anchor	3r 
 retinanet-train --backbone resnet50 --weights resnet50_coco_best_v2.1.0.h5 --image-max-side 700 --image-min-side 700 --batch-size 1 --epochs 10 --weighted-average --compute-val-loss --steps 4000 --config retinanet-3.ini csv train_neg_0.85-1885-332-2217.csv classes --val-annotations test_0.85-333.csv
 
