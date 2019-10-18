@@ -217,8 +217,8 @@ def evaluate(
                 overlaps            = compute_overlap(np.expand_dims(d, axis=0), annotations)
                 assigned_annotation = np.argmax(overlaps, axis=1)
                 max_overlap         = overlaps[0, assigned_annotation]
-                print(overlaps)
-                print(max_overlap)
+                # print(overlaps)
+                # print(max_overlap)
                 if max_overlap >= iou_threshold and assigned_annotation not in detected_annotations:
                     false_positives = np.append(false_positives, 0)
                     true_positives  = np.append(true_positives, 1)

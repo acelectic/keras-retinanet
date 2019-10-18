@@ -221,13 +221,13 @@ def run(generator, args, anchor_params):
                 draw_caption(image, [0, image.shape[0]], os.path.basename(generator.image_path(i)))
 
         cv2.imshow('Image', image)
-        key = cv2.waitKey()
+        key = cv2.waitKey(1)
 
         # note that the right and left keybindings are probably different for windows
         # press right for next image and left for previous (linux)
         # if you run macOS, it might be convenient using "n" and "m" key (key == 110 and key == 109)
 
-        if key == 83:
+        if cv2.waitKey(33) == ord('a'):
             i = (i + 1) % generator.size()
         if key == 81:
             i -= 1
@@ -263,7 +263,7 @@ def main(args=None):
         anchor_params = parse_anchor_parameters(args.config)
 
     # create the display window
-    cv2.namedWindow('Image', cv2.WINDOW_NORMAL)
+    cv2.namedWindow('Image', cv2.WINDOW_AUTOSIZE)
 
     run(generator, args, anchor_params=anchor_params)
 
