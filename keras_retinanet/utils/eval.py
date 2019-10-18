@@ -41,6 +41,8 @@ def _compute_ap(recall, precision):
     # first append sentinel values at the end
     mrec = np.concatenate(([0.], recall, [1.]))
     mpre = np.concatenate(([0.], precision, [0.]))
+    # print('mrec', len(mrec), mrec)
+    # print('mpre', len(mpre), mpre)
 
     # compute the precision envelope
     for i in range(mpre.size - 1, 0, -1):
@@ -49,10 +51,23 @@ def _compute_ap(recall, precision):
     # to calculate area under PR curve, look for points
     # where X axis (recall) changes value
     i = np.where(mrec[1:] != mrec[:-1])[0]
+    # print('i:')
+    # print(i)
+    # print('mrec i+1:', len(mrec[i+1]),mrec[i + 1])
+    # print('mrec i:', len(mrec[i]), mrec[i])
+    # print('mpre i+1:', len(mpre[i+1]), mpre[i + 1])
+    
+    tmp_ap = (mrec[i + 1] - mrec[i]) * mpre[i + 1]
+    # print('ap', len(tmp_ap), tmp_ap)
 
     # and sum (\Delta recall) * prec
-    ap = np.sum((mrec[i + 1] - mrec[i]) * mpre[i + 1])
-    return ap
+    ap = np.sum(tmp_ap)
+    tmp_mrec = np.sum(mrec[i + 1] - mrec[i])/len(mrec[i + 1] - mrec[i])
+    tmp_mpre = np.sum(mpre[i + 1])/len(mpre[i + 1])
+
+    # print('tmp_mrec', tmp_mrec)
+    # print('tmp_mpre', tmp_mpre)
+    return ap, tmp_mrec, tmp_mpre
 
 
 def _get_detections(generator, model, score_threshold=0.05, max_detections=100, save_path=None):
@@ -100,6 +115,7 @@ def _get_detections(generator, model, score_threshold=0.05, max_detections=100, 
         image_scores     = scores[scores_sort]
         image_labels     = labels[0, indices[scores_sort]]
         image_detections = np.concatenate([image_boxes, np.expand_dims(image_scores, axis=1), np.expand_dims(image_labels, axis=1)], axis=1)
+        
 
         if save_path is not None:
             draw_annotations(raw_image, generator.load_annotations(i), label_to_name=generator.label_to_name)
@@ -168,7 +184,7 @@ def evaluate(
     all_detections     = _get_detections(generator, model, score_threshold=score_threshold, max_detections=max_detections, save_path=save_path)
     all_annotations    = _get_annotations(generator)
     average_precisions = {}
-
+    prerecall = {}
     # all_detections = pickle.load(open('all_detections.pkl', 'rb'))
     # all_annotations = pickle.load(open('all_annotations.pkl', 'rb'))
     # pickle.dump(all_detections, open('all_detections.pkl', 'wb'))
@@ -201,7 +217,8 @@ def evaluate(
                 overlaps            = compute_overlap(np.expand_dims(d, axis=0), annotations)
                 assigned_annotation = np.argmax(overlaps, axis=1)
                 max_overlap         = overlaps[0, assigned_annotation]
-
+                print(overlaps)
+                print(max_overlap)
                 if max_overlap >= iou_threshold and assigned_annotation not in detected_annotations:
                     false_positives = np.append(false_positives, 0)
                     true_positives  = np.append(true_positives, 1)
@@ -223,13 +240,17 @@ def evaluate(
         # compute false positives and true positives
         false_positives = np.cumsum(false_positives)
         true_positives  = np.cumsum(true_positives)
-
+        # print('num:',num_annotations)
+        # print('false',false_positives, len(false_positives))
+        # print('true',true_positives, len(true_positives))
         # compute recall and precision
         recall    = true_positives / num_annotations
         precision = true_positives / np.maximum(true_positives + false_positives, np.finfo(np.float64).eps)
-
+        # print('recall', recall, len(recall))
+        # print('precision', precision, len(precision))
         # compute average precision
-        average_precision  = _compute_ap(recall, precision)
+        average_precision, average_recall, average_precision_t  = _compute_ap(recall, precision)
         average_precisions[label] = average_precision, num_annotations
-
-    return average_precisions, recall, precision
+        prerecall[label] = average_recall, average_precision_t, num_annotations
+    # print('aps:', average_precisions)
+    return average_precisions, prerecall

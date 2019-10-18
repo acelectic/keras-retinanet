@@ -144,7 +144,7 @@ def main(args=None):
 
     # print model summary
     # print(model.summary())
-
+    save_path='/home/minibear-l/Desktop/pre-data/imgvi/'
     # start evaluation
     if args.dataset_type == 'coco':
         from ..utils.coco_eval import evaluate_coco

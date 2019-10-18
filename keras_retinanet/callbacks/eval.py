@@ -60,7 +60,7 @@ class Evaluate(keras.callbacks.Callback):
         logs = logs or {}
 
         # run evaluation
-        average_precisions, recall, precison = evaluate(
+        average_precisions, prerecall = evaluate(
             self.generator,
             self.model,
             iou_threshold=self.iou_threshold,
@@ -68,34 +68,55 @@ class Evaluate(keras.callbacks.Callback):
             max_detections=self.max_detections,
             save_path=self.save_path
         )
-        self.recall = recall
-        self.precision = precision
+
         # compute per class average precision
         total_instances = []
         precisions = []
+        recalls = []
+        precisionts = []
         for label, (average_precision, num_annotations ) in average_precisions.items():
             if self.verbose == 1:
-                print('{:.0f} instances of class'.format(num_annotations),
-                      self.generator.label_to_name(label), 'with average precision: {:.4f}'.format(average_precision))
+                print('class:{}\t{:.0f} instances of class'.format(label, num_annotations),
+                    self.generator.label_to_name(label), 'with average precision: {:.4f}'.format(average_precision))
             total_instances.append(num_annotations)
             precisions.append(average_precision)
+            
+        for label, (recall, precisiont, num_annotations ) in prerecall.items():
+            if self.verbose == 1:
+                print('class:{}\t{:.0f} instances of class'.format(label, num_annotations),
+                      self.generator.label_to_name(label), 'with average recall: {:.4f}'.format(recall))
+                print('class:{}\t{:.0f} instances of class'.format(label, num_annotations),
+                      self.generator.label_to_name(label), 'with average precisiont: {:.4f}'.format(precisiont))
+            recalls.append(recall)
+            precisionts.append(precisiont)
+
+        
         if self.weighted_average:
             self.mean_ap = sum([a * b for a, b in zip(total_instances, precisions)]) / sum(total_instances)
+            self.mean_recal = sum([a * b for a, b in zip(total_instances, recalls)]) / sum(total_instances)
+            self.mean_precisont = sum([a * b for a, b in zip(total_instances, precisionts)]) / sum(total_instances)
         else:
             self.mean_ap = sum(precisions) / sum(x > 0 for x in total_instances)
+            self.mean_recal = sum(recalls) / sum(x > 0 for x in total_instances)
+            self.mean_precisont = sum(precisionts) / sum(x > 0 for x in total_instances)
 
         if self.tensorboard:
             import tensorflow as tf
             if tf.version.VERSION < '2.0.0' and self.tensorboard.writer:
-                summary = tf.Summary()
+                summary = tf.compat.v1.Summary()
                 summary_value = summary.value.add()
                 summary_value.simple_value = self.mean_ap
                 summary_value.tag = "mAP"
                 self.tensorboard.writer.add_summary(summary, epoch)
 
+               
+
         logs['mAP'] = self.mean_ap
+        logs['mean_recall'] = self.mean_recal
+        logs['mean_precisont'] = self.mean_precisont
 
         if self.verbose == 1:
             print('mAP: {:.4f}'.format(self.mean_ap))
-            print('recall: {:.4f}'.format(self.recall))
-            print('precision: {:.4f}'.format(self.precision))
+            print('mean_recall: {:.4f}'.format(self.mean_recal))
+            print('mean_precisont: {:.4f}'.format(self.mean_precisont))
+

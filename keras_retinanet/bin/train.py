@@ -181,7 +181,7 @@ def create_callbacks(model, training_model, prediction_model, validation_generat
                 # '{backbone}_{dataset_type}_{{epoch:02d}}_{{mAP:02d}}.h5'.format(backbone=args.backbone, dataset_type=args.dataset_type)
             ),
             verbose=1,
-            # save_best_only=True,
+            save_best_only=True,
             # monitor="mAP",
             # mode='max'
         )
