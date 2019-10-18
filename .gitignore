@@ -21,3 +21,9 @@ __pycache__/
 .coverage.*
 coverage.xml
 *.cover
+
+.eggs/
+.idea/
+build/
+*.c
+*.so
