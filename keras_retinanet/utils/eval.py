@@ -62,12 +62,12 @@ def _compute_ap(recall, precision):
 
     # and sum (\Delta recall) * prec
     ap = np.sum(tmp_ap)
-    tmp_mrec = np.sum(mrec[i + 1] - mrec[i])/len(mrec[i + 1] - mrec[i])
-    tmp_mpre = np.sum(mpre[i + 1])/len(mpre[i + 1])
+    # tmp_mrec = np.sum(mrec)/len(mrec)
+    # tmp_mpre = np.sum(mpre[i + 1])/len(mpre[i + 1])
 
     # print('tmp_mrec', tmp_mrec)
     # print('tmp_mpre', tmp_mpre)
-    return ap, tmp_mrec, tmp_mpre
+    return ap
 
 
 def _get_detections(generator, model, score_threshold=0.05, max_detections=100, save_path=None):
@@ -246,11 +246,18 @@ def evaluate(
         # compute recall and precision
         recall    = true_positives / num_annotations
         precision = true_positives / np.maximum(true_positives + false_positives, np.finfo(np.float64).eps)
-        # print('recall', recall, len(recall))
+        # print('recall', recall, len(recall), np.sum(recall)/len(recall))
+
+        average_recall = np.sum(recall)/len(recall)
+        average_precision_t = np.sum(precision)/len(precision)
+        print('avg_racall', average_recall)
+        print('avg_precision', average_precision_t)
         # print('precision', precision, len(precision))
         # compute average precision
         average_precision, average_recall, average_precision_t  = _compute_ap(recall, precision)
         average_precisions[label] = average_precision, num_annotations
-        prerecall[label] = average_recall, average_precision_t, num_annotations
+
+
+        prerecall[label] = average_recall, average_precision_t
     # print('aps:', average_precisions)
     return average_precisions, prerecall

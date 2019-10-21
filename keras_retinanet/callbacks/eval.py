@@ -111,6 +111,7 @@ class Evaluate(keras.callbacks.Callback):
 
                
 
+
         logs['mAP'] = self.mean_ap
         logs['mean_recall'] = self.mean_recal
         logs['mean_precisont'] = self.mean_precisont
