@@ -248,16 +248,16 @@ def evaluate(
         precision = true_positives / np.maximum(true_positives + false_positives, np.finfo(np.float64).eps)
         # print('recall', recall, len(recall), np.sum(recall)/len(recall))
 
-        average_recall = np.sum(recall)/len(recall)
-        average_precision_t = np.sum(precision)/len(precision)
+        average_recall = np.sum(recall)/len(recall) if len(recall) > 0 else 0
+        average_precision_t = np.sum(precision)/len(precision) if len(precision) > 0 else 0
         print('avg_racall', average_recall)
         print('avg_precision', average_precision_t)
         # print('precision', precision, len(precision))
         # compute average precision
-        average_precision, average_recall, average_precision_t  = _compute_ap(recall, precision)
+        average_precision  = _compute_ap(recall, precision)
         average_precisions[label] = average_precision, num_annotations
 
 
-        prerecall[label] = average_recall, average_precision_t
+        prerecall[label] = average_recall, average_precision_t, num_annotations
     # print('aps:', average_precisions)
     return average_precisions, prerecall
