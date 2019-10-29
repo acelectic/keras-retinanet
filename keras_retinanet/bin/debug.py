@@ -229,7 +229,7 @@ def run(generator, args, anchor_params):
 
         if cv2.waitKey(33) == ord('a'):
             i = (i + 1) % generator.size()
-        if key == 81:
+        if key == ord('d'):
             i -= 1
             if i < 0:
                 i = generator.size() - 1
