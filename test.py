@@ -8,6 +8,7 @@ import keras
 import sys
 sys.path.insert(0, '../')
 
+import pprint
 
 # import keras_retinanet
 from keras_retinanet import models
@@ -26,6 +27,8 @@ import time
 # set tf backend to allow memory to grow, instead of claiming everything
 import tensorflow as tf
 
+import keras.backend as K
+
 # use this to change which GPU to use
 gpu = 0
 
@@ -35,12 +38,11 @@ setup_gpu(gpu)
 
 # ## Load RetinaNet model
 
-# In[ ]:
-
-
 # adjust this to point to your downloaded/trained model
 # models can be downloaded here: https://github.com/fizyr/keras-retinanet/releases
-model_path = 'snapshots/model-infer-merge-resnet50-canchor-ep20-loss-0.1881.h5'
+# model_path = 'snapshots/model-infer-merge-resnet50-canchor-ep20-loss-0.1881.h5'
+model_path = 'snapshots/resnet50_20_loss-0.1881_val-loss-1.1923_mAP-0.8562.h5'
+
 
 # load retinanet model
 model = models.load_model(model_path, backbone_name='resnet50')
@@ -56,12 +58,8 @@ labels_to_names = {0: 'person', 1: 'bicycle', 2: 'car', 3: 'motorcycle', 4: 'air
 
 
 # ## Run detection on example
-
-# In[ ]:
-
-
 # load image
-image = read_image_bgr('examples/000000008021.jpg')
+image = read_image_bgr('examples/pigeon-12_000180.png')
 
 # copy to draw on
 draw = image.copy()
@@ -73,40 +71,82 @@ image, scale = resize_image(image)
 
 # process image
 start = time.time()
-boxes, scores, labels = model.predict_on_batch(np.expand_dims(image, axis=0))
-print("processing time: ", time.time() - start)
 
-# correct for image scale
-boxes /= scale
+# model.summary()
+inp = model.input                                           # input placeholder
+# outputs = [layer.output for layer in model.layers]  
+# boxes, scores, labels = model.predict_on_batch(np.expand_dims(image, axis=0))
+# image = np.expand_dims(image, axis=0)
 
-# visualize detections
-for box, score, label in zip(boxes[0], scores[0], labels[0]):
-    # scores are sorted so we can break
-    if score < 0.5:
-        break
+
+outputs = [layer.output for layer in model.layers] 
+functor = K.function([inp, K.learning_phase()], outputs )   # evaluation function
+
+# Testing
+
+layer_outs = functor([image, 1.])
+print (layer_outs)
+
+# p3 = model.get_layer('P3').output
+# p4 = model.get_layer('P4').output
+# p5 = model.get_layer('P5').output
+# p6 = model.get_layer('P6').output
+# p7 = model.get_layer('P7').output
+# fc = K.function([inp, K.learning_phase()], [p3, p4, p5, p6, p7])
+# p3_out = fc([image, 1.])[0]
+# print(p3_out.shape)
+
+# ff = model.layers[5].output
+# fc = K.function([inp, K.learning_phase()], [ff])
+# f_out = func([image, 1.])[0]
+# print(f_out.shape)
+
+# plt.figure(figsize=(15, 15))
+# plt.axis('off')
+
+# for i in model.layers[1:2]:
+#     try:
+#         # print(i, i.output)
+#         out = i.output
+#         # print(out)
+#         func = K.function([inp, K.learning_phase()], [out])
+#         f_out = func([image, 1.])[0]
+#         print(f_out.shape)
+#         # pprint.pprint(f_out[0])
         
-    color = label_color(label)
+#         dist = f_out[0]
+#         dist1 = cv2.convertScaleAbs(dist)
+#         dist2 = cv2.normalize(dist, None, 255,0, cv2.NORM_MINMAX, cv2.CV_8UC1)
+        
+#         cv2.imshow("dist", dist)
+#         cv2.imshow("dist1", dist1)
+#         cv2.imshow("dist2", dist2)
+#         cv2.waitKey()
+#         # plt.imshow(f_out[0])
+#         # K.function([inp, K.learning_phase()], [out])
+#     except Exception as e:
+#         print("{t}{e}{t}".format(e=e, t='\n\n\n'))
+
+
+
+# plt.show()
+
+# print("processing time: ", time.time() - start)
+
+# # correct for image scale
+# boxes /= scale
+
+# # visualize detections
+# for box, score, label in zip(boxes[0], scores[0], labels[0]):
+#     # scores are sorted so we can break
+#     if score < 0.5:
+#         break
+        
+#     color = label_color(label)
     
-    b = box.astype(int)
-    draw_box(draw, b, color=color)
+#     b = box.astype(int)
+#     draw_box(draw, b, color=color)
     
-    caption = "{} {:.3f}".format(labels_to_names[label], score)
-    draw_caption(draw, b, caption)
+#     caption = "{} {:.3f}".format(labels_to_names[label], score)
+#     draw_caption(draw, b, caption)
     
-plt.figure(figsize=(15, 15))
-plt.axis('off')
-plt.imshow(draw)
-plt.show()
-
-
-# In[ ]:
-
-
-
-
-
-# In[ ]:
-
-
-
-
