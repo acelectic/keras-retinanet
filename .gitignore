@@ -27,3 +27,4 @@ coverage.xml
 build/
 *.c
 *.so
+wandb/

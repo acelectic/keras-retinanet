@@ -24,6 +24,9 @@ import warnings
 import keras
 import keras.preprocessing.image
 import tensorflow as tf
+import wandb
+from wandb.keras import WandbCallback
+wandb.init(project="pigeon")
 
 # Allow relative imports when being executed as script.
 if __name__ == "__main__" and __package__ is None:
@@ -142,7 +145,7 @@ def create_callbacks(model, training_model, prediction_model, validation_generat
         A list of callbacks used for training.
     """
     callbacks = []
-
+    callbacks.append(WandbCallback())
     tensorboard_callback = None
 
     if args.tensorboard_dir:
@@ -520,4 +523,5 @@ def main(args=None):
 
 
 if __name__ == '__main__':
-    main()
+    model = main()
+    model.save(os.path.join(wandb.run.dir, "model.h5"))
