@@ -27,3 +27,6 @@ coverage.xml
 build/
 *.c
 *.so
+retinenet-vis/
+
+wandb/settings
