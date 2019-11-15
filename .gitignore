@@ -28,3 +28,5 @@ build/
 *.c
 *.so
 wandb/
+
+images/

@@ -23,11 +23,13 @@ import warnings
 
 import keras
 import keras.preprocessing.image
+from keras.callbacks import Callback
 import tensorflow as tf
 import wandb
 from wandb.keras import WandbCallback
-wandb.init(project="pigeon")
 
+import cv2, time
+import numpy as np
 # Allow relative imports when being executed as script.
 if __name__ == "__main__" and __package__ is None:
     sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
@@ -52,7 +54,13 @@ from ..utils.model import freeze as freeze_model
 from ..utils.transform import random_transform_generator
 from ..utils.image import random_visual_effect_generator
 from ..utils.gpu import setup_gpu
+from ..utils.image import read_image_bgr, preprocess_image, resize_image
+from ..utils.visualization import draw_box, draw_caption
+from ..utils.colors import label_color
 
+import glob
+
+labels_to_names = {0: 'pigeon'}
 
 def makedirs(path):
     # Intended behavior: try to create the directory,
@@ -130,6 +138,51 @@ def create_models(backbone_retinanet, num_classes, weights, multi_gpu=0,
 
     return model, training_model, prediction_model
 
+class log_image_callback(Callback):
+    def on_epoch_end(self, epoch, logs={}):
+        images = glob.glob('data4eval/non-pigeon/*.jpg')
+        inference_model = models.convert_model(self.model)
+
+        # images are of differrent dimensions, so couldn't get batch
+        # inference to work
+        for image in images:
+            self.log_image(image, inference_model)
+        
+
+
+    def log_image(self, image_name, inference_model):
+        # image_path = './data/images/train2017/' + image_name #000000000009.jpg'
+        image_path = image_name
+        image = read_image_bgr(image_path)
+        draw = image.copy()
+        draw = cv2.cvtColor(draw, cv2.COLOR_BGR2RGB)
+
+        # preprocess image for network
+        image = preprocess_image(image)
+        image, scale = resize_image(image)
+
+        # process image
+        start = time.time()
+        boxes, scores, labels = inference_model.predict_on_batch(np.expand_dims(image, axis=0))
+        print("processing time: ", time.time() - start)
+        annotations = []
+        for box, score, label in zip(boxes[0], scores[0], labels[0]):
+            # scores are sorted so we can break
+            if score < 0.5:
+                break
+                
+            color = label_color(label)
+            
+            b = box.astype(int)
+            draw_box(draw, b, color=color)
+            
+            caption = "{} {:.3f}".format(labels_to_names[label], score)
+            draw_caption(draw, b, caption)
+            annotations.append(caption)
+        annotation_str = ', '.join(annotations)
+        if len(annotation_str) == 0:
+            annotation_str = "Still Learning!"
+        wandb.log({image_name: [wandb.Image(draw, caption=annotation_str)]}, commit=False)
 
 def create_callbacks(model, training_model, prediction_model, validation_generator, args):
     """ Creates the callbacks to use during training.
@@ -145,7 +198,7 @@ def create_callbacks(model, training_model, prediction_model, validation_generat
         A list of callbacks used for training.
     """
     callbacks = []
-    callbacks.append(WandbCallback())
+    
     tensorboard_callback = None
 
     if args.tensorboard_dir:
@@ -160,6 +213,7 @@ def create_callbacks(model, training_model, prediction_model, validation_generat
             embeddings_layer_names = None,
             embeddings_metadata    = None
         )
+        callbacks.append(tensorboard_callback)
 
     if args.evaluation and validation_generator:
         if args.dataset_type == 'coco':
@@ -202,9 +256,10 @@ def create_callbacks(model, training_model, prediction_model, validation_generat
         min_lr     = 0
     ))
 
-    if args.tensorboard_dir:
-        callbacks.append(tensorboard_callback)
-
+    callbacks.append(log_image_callback())
+    callbacks.append(WandbCallback())
+    # callbacks.append(wandb.keras.WandbCallback(log_weights=True, monitor="loss", mode="min"))
+ 
     return callbacks
 
 
@@ -435,7 +490,9 @@ def parse_args(args):
     parser.add_argument('--workers',          help='Number of generator workers.', type=int, default=1)
     parser.add_argument('--max-queue-size',   help='Queue length for multiprocessing workers in fit_generator.', type=int, default=10)
 
-    return check_args(parser.parse_args(args))
+    config=parser.parse_args(args)
+    wandb.config.update(config)
+    return check_args(config)
 
 
 def main(args=None):
@@ -523,5 +580,6 @@ def main(args=None):
 
 
 if __name__ == '__main__':
+    wandb.init(project="pigeon")
     model = main()
     model.save(os.path.join(wandb.run.dir, "model.h5"))
