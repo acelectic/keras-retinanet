@@ -49,7 +49,7 @@ draw = cv2.cvtColor(draw, cv2.COLOR_BGR2RGB)
 
 # preprocess image for network
 image = preprocess_image(image)
-image, scale = resize_image(image)
+image, scale = resize_image(image, min_side=1000)
 
 image = np.expand_dims(image, axis=0)
 
@@ -62,14 +62,21 @@ model_path = 'snapshots/model-infer-merge-resnet50-canchor-ep20-loss-0.1881.h5'
 # load retinanet model
 model = models.load_model(model_path, backbone_name='resnet50')
 
+
 layer_names = []
 layer_names += ["P3", "P4", "P5", "P6", "P7"]
 layer_names += ["C3_reduced","C4_reduced","C5_reduced"]
 layer_names += ["P5_upsampled", "P4_upsampled"]
 layer_names += ["P3_merged", "P4_merged"]
+layer_names += ["res5c_relu"]
 
+# layer_names += ["anchors_0", "anchors_1", "anchors_2", "anchors_3", "anchors_4"]
 
+# layer_names += ["regression", "classification"]
+# layer_names += ["boxes"]
+# layer_names += ["anchors"]
 # layer_names += ["clipped_boxes"]
+# layer_names += ["filtered_detections"]
 
 layer_outputs = [model.get_layer(layer_name).output for layer_name in layer_names] 
 
@@ -97,19 +104,33 @@ def test1():
                                                 :, :,
                                                 col * images_per_row + row]
                 # print(channel_image.shape)
-                # channel_image -= channel_image.mean() # Post-processes the feature to make it visually palatable
-                # channel_image /= channel_image.std()
-                # channel_image *= 64
-                # channel_image += 128
-                # channel_image = np.clip(channel_image, 0, 255).astype('uint8')
+                channel_image -= channel_image.mean() # Post-processes the feature to make it visually palatable
+                channel_image /= channel_image.std()
+                channel_image *= 64
+                channel_image += 128
+                channel_image = np.clip(channel_image, 0, 255).astype('uint8')
                 display_grid[col * h : (col + 1) * h, # Displays the grid
                             row * w : (row + 1) * w] = channel_image
-        print(layer_name)
+        # print(layer_name)
         # cv2.imshow(layer_name, display_grid)
-        # cv2.waitKey()
-        # cv2.imwrite("retinenet-vis/"+layer_name+".png", display_grid)
-        plt.matshow(display_grid, cmap='gray')
-        plt.show()
+        # cv2.waitKey()        g", display_grid)
+        # plt.matshow(display_grid, cmap='gray')
+        fig = plt.figure(figsize=(14, 9))
+        
+        ax = fig.add_subplot(111)
+        ax.set_title('Name:{}  shape:{}, {}'.format(layer_name, w, h))
+        
+        img = plt.imshow(display_grid, cmap='gray')
+        
+        v1 = np.linspace(0, 255, 8, endpoint=True)
+        # print(v1)
+        cb = plt.colorbar(ticks=v1)
+        
+        # cax = ax.matshow(display_grid, cmap='gray')
+        
+        plt.savefig("retinenet-vis/"+layer_name+".png")
+        # plt.imsave("retinenet-vis/"+layer_name+".png", display_grid, cmap='gray')
+        # plt.show()
    
  
 test1()
