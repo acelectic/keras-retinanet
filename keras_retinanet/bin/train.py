@@ -17,29 +17,24 @@ limitations under the License.
 """
 
 import argparse
+import glob
 import os
 import sys
+import time
 import warnings
 
+import cv2
 import keras
 import keras.preprocessing.image
-from keras.callbacks import Callback
+import numpy as np
 import tensorflow as tf
 import wandb
+from keras.callbacks import Callback
 from wandb.keras import WandbCallback
-
-import cv2, time
-import numpy as np
-# Allow relative imports when being executed as script.
-if __name__ == "__main__" and __package__ is None:
-    sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
-    import keras_retinanet.bin  # noqa: F401
-    __package__ = "keras_retinanet.bin"
 
 # Change these to absolute imports if you copy this script outside the keras_retinanet package.
 from .. import layers  # noqa: F401
-from .. import losses
-from .. import models
+from .. import losses, models
 from ..callbacks import RedirectModel
 from ..callbacks.eval import Evaluate
 from ..models.retinanet import retinanet_bbox
@@ -48,17 +43,23 @@ from ..preprocessing.kitti import KittiGenerator
 from ..preprocessing.open_images import OpenImagesGenerator
 from ..preprocessing.pascal_voc import PascalVocGenerator
 from ..utils.anchors import make_shapes_callback
-from ..utils.config import read_config_file, parse_anchor_parameters
+from ..utils.colors import label_color
+from ..utils.config import parse_anchor_parameters, read_config_file
+from ..utils.gpu import setup_gpu
+from ..utils.image import (preprocess_image, random_visual_effect_generator,
+                           read_image_bgr, resize_image)
 from ..utils.keras_version import check_keras_version
 from ..utils.model import freeze as freeze_model
 from ..utils.transform import random_transform_generator
-from ..utils.image import random_visual_effect_generator
-from ..utils.gpu import setup_gpu
-from ..utils.image import read_image_bgr, preprocess_image, resize_image
 from ..utils.visualization import draw_box, draw_caption
-from ..utils.colors import label_color
 
-import glob
+# Allow relative imports when being executed as script.
+if __name__ == "__main__" and __package__ is None:
+    sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
+    import keras_retinanet.bin  # noqa: F401
+    __package__ = "keras_retinanet.bin"
+
+
 
 labels_to_names = {0: 'pigeon'}
 wandb.init(project="pigeon")
@@ -185,7 +186,7 @@ class log_image_callback(Callback):
         annotation_str = ', '.join(annotations)
         if len(annotation_str) == 0:
             annotation_str = "Still Learning!"
-        wandb.log({image_name: [wandb.Image(draw, caption='Processing Time: {pst}, {anno}'.format(pst= pst, anno = annotation_str))]}, commit=False)
+        wandb.log({image_name: [wandb.Image(draw, caption='Processing Time: {pst:.4f}, {anno}'.format(pst= pst, anno = annotation_str))]}, commit=False)
 
 def create_callbacks(model, training_model, prediction_model, validation_generator, args):
     """ Creates the callbacks to use during training.
@@ -241,7 +242,7 @@ def create_callbacks(model, training_model, prediction_model, validation_generat
                 # '{backbone}_{dataset_type}_{{epoch:02d}}_{{mAP:02d}}.h5'.format(backbone=args.backbone, dataset_type=args.dataset_type)
             ),
             verbose=1,
-            # save_best_only=True,
+            save_best_only=True,
             # monitor="mAP",
             # mode='max'
         )
@@ -586,3 +587,4 @@ if __name__ == '__main__':
 
     model = main()
     model.save(os.path.join(wandb.run.dir, "model.h5"))
+
