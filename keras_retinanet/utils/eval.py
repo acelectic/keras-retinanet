@@ -14,15 +14,17 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
-from .anchors import compute_overlap
-from .visualization import draw_detections, draw_annotations
-
-import keras
-import numpy as np
 import os
+import pprint
 
 import cv2
+import keras
+import numpy as np
 import progressbar
+
+from .anchors import compute_overlap
+from .visualization import draw_annotations, draw_detections
+
 assert(callable(progressbar.progressbar)), "Using wrong progressbar module, install 'progressbar2' instead."
 
 
@@ -240,24 +242,44 @@ def evaluate(
         # compute false positives and true positives
         false_positives = np.cumsum(false_positives)
         true_positives  = np.cumsum(true_positives)
-        # print('num:',num_annotations)
-        # print('false',false_positives, len(false_positives))
-        # print('true',true_positives, len(true_positives))
+        
+        np_max = np.maximum(true_positives + false_positives, np.finfo(np.float64).eps)
+        num_detects = len(true_positives)
+        
+        temp_confusion = {}
+        temp_confusion[label] = {'true_positives': true_positives[-1],
+                           'false_positives': false_positives[-1],
+                            'num_annotations': num_annotations,
+                            'num_detects': num_detects,
+                            }
+        
+        
+        
+        temp_confusion[label]['recall'] =  true_positives[-1]/num_annotations
+        temp_confusion[label]['precision'] =  true_positives[-1]/num_detects
+        
+        pprint.pprint(temp_confusion)
+        
+        
+        # print('num anno:', num_annotations)
+        # print('false', len(false_positives), false_positives)
+        # print('true', len(true_positives), true_positives)
+        # print('np_max', len(np_max), np_max)
         # compute recall and precision
         recall    = true_positives / num_annotations
-        precision = true_positives / np.maximum(true_positives + false_positives, np.finfo(np.float64).eps)
+        precision = true_positives / np_max
         # print('recall', recall, len(recall), np.sum(recall)/len(recall))
 
-        average_recall = np.sum(recall)/len(recall) if len(recall) > 0 else 0
-        average_precision_t = np.sum(precision)/len(precision) if len(precision) > 0 else 0
-        print('avg_racall', average_recall)
-        print('avg_precision', average_precision_t)
+        # average_recall = np.sum(recall)/len(recall) if len(recall) > 0 else 0
+        # average_precision_t = np.sum(precision)/len(precision) if len(precision) > 0 else 0
+        # print('avg_racall', average_recall)
+        # print('avg_precision', average_precision_t)
         # print('precision', precision, len(precision))
         # compute average precision
         average_precision  = _compute_ap(recall, precision)
         average_precisions[label] = average_precision, num_annotations
 
-
-        prerecall[label] = average_recall, average_precision_t, num_annotations
-    # print('aps:', average_precisions)
-    return average_precisions, prerecall
+        
+        # prerecall[label] = average_recall, average_precision_t, num_annotations
+        # print('aps:', average_precisions)
+    return average_precisions, temp_confusion

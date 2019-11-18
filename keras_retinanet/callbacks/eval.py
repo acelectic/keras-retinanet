@@ -60,7 +60,7 @@ class Evaluate(keras.callbacks.Callback):
         logs = logs or {}
 
         # run evaluation
-        average_precisions, prerecall = evaluate(
+        average_precisions, temp_confusion = evaluate(
             self.generator,
             self.model,
             iou_threshold=self.iou_threshold,
@@ -81,24 +81,26 @@ class Evaluate(keras.callbacks.Callback):
             total_instances.append(num_annotations)
             precisions.append(average_precision)
             
-        for label, (recall, precisiont, num_annotations ) in prerecall.items():
+        for label, tmp_conf in temp_confusion.items():
+            recall = tmp_conf['recall'] 
+            precision_t = tmp_conf['precision']
             if self.verbose == 1:
                 print('class:{}\t{:.0f} instances of class'.format(label, num_annotations),
-                      self.generator.label_to_name(label), 'with average recall: {:.4f}'.format(recall))
+                      self.generator.label_to_name(label), 'with recall: {:.4f}'.format(recall))
                 print('class:{}\t{:.0f} instances of class'.format(label, num_annotations),
-                      self.generator.label_to_name(label), 'with average precisiont: {:.4f}'.format(precisiont))
+                      self.generator.label_to_name(label), 'with precision: {:.4f}'.format(precision_t))
             recalls.append(recall)
-            precisionts.append(precisiont)
+            precisionts.append(precision_t)
 
         
         if self.weighted_average:
             self.mean_ap = sum([a * b for a, b in zip(total_instances, precisions)]) / sum(total_instances)
-            self.mean_recal = sum([a * b for a, b in zip(total_instances, recalls)]) / sum(total_instances)
-            self.mean_precisont = sum([a * b for a, b in zip(total_instances, precisionts)]) / sum(total_instances)
+            self.mean_recall = sum([a * b for a, b in zip(total_instances, recalls)]) / sum(total_instances)
+            self.mean_precision = sum([a * b for a, b in zip(total_instances, precisionts)]) / sum(total_instances)
         else:
             self.mean_ap = sum(precisions) / sum(x > 0 for x in total_instances)
-            self.mean_recal = sum(recalls) / sum(x > 0 for x in total_instances)
-            self.mean_precisont = sum(precisionts) / sum(x > 0 for x in total_instances)
+            self.mean_recall = sum(recalls) / sum(x > 0 for x in total_instances)
+            self.mean_precision = sum(precisionts) / sum(x > 0 for x in total_instances)
 
         if self.tensorboard:
             import tensorflow as tf
@@ -110,14 +112,19 @@ class Evaluate(keras.callbacks.Callback):
                 self.tensorboard.writer.add_summary(summary, epoch)
 
                
-
+        self.temp_confusion = temp_confusion
 
         logs['mAP'] = self.mean_ap
-        logs['mean_recall'] = self.mean_recal
-        logs['mean_precisont'] = self.mean_precisont
-
+        logs['mean_recall'] = self.mean_recall
+        logs['mean_precision'] = self.mean_precision
+        
+        # logs['true_positives'] =    self.temp_confusion['true_positives']
+        # logs['false_positives'] =   self.temp_confusion['false_positives']
+        # logs['num_annotations'] =   self.temp_confusion['num_annotations']
+        # logs['num_detects'] =       self.temp_confusion['num_detects']
+        
         if self.verbose == 1:
             print('mAP: {:.4f}'.format(self.mean_ap))
-            print('mean_recall: {:.4f}'.format(self.mean_recal))
-            print('mean_precisont: {:.4f}'.format(self.mean_precisont))
+            print('mean_recall: {:.4f}'.format(self.mean_recall))
+            print('mean_precision: {:.4f}'.format(self.mean_precision))
 

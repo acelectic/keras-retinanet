@@ -61,7 +61,7 @@ from ..utils.colors import label_color
 import glob
 
 labels_to_names = {0: 'pigeon'}
-
+wandb.init(project="pigeon")
 def makedirs(path):
     # Intended behavior: try to create the directory,
     # pass if the directory exists already, fails otherwise.
@@ -141,6 +141,7 @@ def create_models(backbone_retinanet, num_classes, weights, multi_gpu=0,
 class log_image_callback(Callback):
     def on_epoch_end(self, epoch, logs={}):
         images = glob.glob('data4eval/non-pigeon/*.jpg')
+        images += glob.glob('data4eval/non-pigeon/*.png')
         inference_model = models.convert_model(self.model)
 
         # images are of differrent dimensions, so couldn't get batch
@@ -159,12 +160,14 @@ class log_image_callback(Callback):
 
         # preprocess image for network
         image = preprocess_image(image)
-        image, scale = resize_image(image)
+        image, scale = resize_image(image, min_side=700, max_side=700)
 
         # process image
         start = time.time()
         boxes, scores, labels = inference_model.predict_on_batch(np.expand_dims(image, axis=0))
-        print("processing time: ", time.time() - start)
+        boxes /= scale
+        pst = time.time() - start
+        print("processing time: ", pst)
         annotations = []
         for box, score, label in zip(boxes[0], scores[0], labels[0]):
             # scores are sorted so we can break
@@ -182,7 +185,7 @@ class log_image_callback(Callback):
         annotation_str = ', '.join(annotations)
         if len(annotation_str) == 0:
             annotation_str = "Still Learning!"
-        wandb.log({image_name: [wandb.Image(draw, caption=annotation_str)]}, commit=False)
+        wandb.log({image_name: [wandb.Image(draw, caption='Processing Time: {pst}, {anno}'.format(pst= pst, anno = annotation_str))]}, commit=False)
 
 def create_callbacks(model, training_model, prediction_model, validation_generator, args):
     """ Creates the callbacks to use during training.
@@ -545,7 +548,7 @@ def main(args=None):
         )
 
     # print model summary
-    print(model.summary())
+    # print(model.summary()) 
 
     # this lets the generator compute backbone layer shapes using the actual backbone model
     if 'vgg' in args.backbone or 'densenet' in args.backbone:
@@ -580,6 +583,6 @@ def main(args=None):
 
 
 if __name__ == '__main__':
-    wandb.init(project="pigeon")
+
     model = main()
     model.save(os.path.join(wandb.run.dir, "model.h5"))
